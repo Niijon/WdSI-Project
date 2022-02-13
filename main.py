@@ -91,8 +91,10 @@ def LoadData(path, annotations):
 
     return data
 
+def BalanceData(data, ratio):
+    sampledData = random.sample(data, int(ratio * len(data)))
 
-def learnBoVW(data):
+    return sampledData
     dict_size = 128
     bow = cv2.BOWKMeansTrainer(dict_size)
 
@@ -110,9 +112,10 @@ def learnBoVW(data):
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
     trainAnnotations = GetAnnotationsData(trainAnnotationsPath)
+    print("Annotations data:")
     PrintAnnotations(trainAnnotations)
     trainData = LoadData(trainImagesPath, trainAnnotations)
-    print('train dataset before balancing:')
+    trainData = BalanceData(trainData, 1.0)
 
 
 
