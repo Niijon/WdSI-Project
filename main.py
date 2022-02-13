@@ -58,6 +58,16 @@ def GetAnnotationsData(ann_path, img_path):
         annotationList.append(annotation) # Add annotation to list of annotations
     return annotationList
 
+# Function for printing data according to template
+def PrintData(data):
+    for annotation in data:
+        print(annotation['filename'])
+        objectsList = annotation['objects']
+        n = len(objectsList)
+        print(n)
+        for obj in objectsList:
+            print(obj.xmin, obj.xmax, obj.ymin, obj.ymax)
+
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
@@ -68,5 +78,9 @@ if __name__ == '__main__':
 
     # train object
     trainSet = GetAnnotationsData(trainAnnotationsPath, trainImagesPath)
+    PrintData(trainSet)
+
+
+
 
 # See PyCharm help at https://www.jetbrains.com/help/pycharm/
