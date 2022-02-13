@@ -14,6 +14,17 @@ import os
 import cv2
 
 
+
+classIdConversion = {'speedlimit': 0,
+              'stop': 1,
+              'crosswalk': 2,
+              'trafficlight': 3}
+
+testAnnotationsPath = './test/annotations'
+testImagesPath = './test/images'
+trainAnnotationsPath = './train/annotations'
+trainImagesPath = './train/images'
+
 class Object:
     xmax = 0
     xmin = 0
@@ -32,8 +43,8 @@ class Object:
 def GetListOfFiles(root, file_type):
     return [os.path.join(directory_path, f) for directory_path, directory_name,
                                                 files in os.walk(root) for f in files if f.endswith(file_type)]
-def GetAnnotationsData(ann_path, img_path):
-    annotationsPaths = GetListOfFiles(ann_path, '.xml')
+def GetAnnotationsData(annotationPath):
+    annotationsPaths = GetListOfFiles(annotationPath, '.xml')
     annotationList = []
     for a_path in annotationsPaths:
         root = ET.parse(a_path).getroot()
@@ -59,7 +70,7 @@ def GetAnnotationsData(ann_path, img_path):
     return annotationList
 
 # Function for printing data according to template
-def PrintData(data):
+def PrintAnnotations(data):
     for annotation in data:
         print(annotation['filename'])
         objectsList = annotation['objects']
@@ -68,17 +79,40 @@ def PrintData(data):
         for obj in objectsList:
             print(obj.xmin, obj.xmax, obj.ymin, obj.ymax)
 
+def LoadData(path, annotations):
+    # train object
+    data = []
+    for annotation in annotations:
+        image = cv2.imread(os.path.join(path, annotation['filename']))
+        for object in annotation['objects']:
+            name = object.name
+            classId = classIdConversion[name]
+            data.append({'image': image, 'label': classId})
+
+    return data
+
+
+def learnBoVW(data):
+    dict_size = 128
+    bow = cv2.BOWKMeansTrainer(dict_size)
+
+    sift = cv2.SIFT_create()
+    for sample in data:
+        kpts = sift.detect(sample['image'], None)
+        kpts, desc = sift.compute(sample['image'], kpts)
+
+        if desc is not None:
+            bow.add(desc)
+
+    vocabulary = bow.cluster()
+    np.save('voc.npy', vocabulary)
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    testAnnotationsPath = './test/annotations'
-    testImagesPath = './test/images'
-    trainAnnotationsPath = './train/annotations'
-    trainImagesPath = './train/images'
-
-    # train object
-    trainSet = GetAnnotationsData(trainAnnotationsPath, trainImagesPath)
-    PrintData(trainSet)
+    trainAnnotations = GetAnnotationsData(trainAnnotationsPath)
+    PrintAnnotations(trainAnnotations)
+    trainData = LoadData(trainImagesPath, trainAnnotations)
+    print('train dataset before balancing:')
 
 
 
