@@ -14,10 +14,11 @@ import cv2
 
 
 
+# 0 - means other sign type
 classIdConversion = {'speedlimit': 0,
-              'stop': 1,
-              'crosswalk': 2,
-              'trafficlight': 3}
+              'stop': 0,
+              'crosswalk': 1,
+              'trafficlight': 0}
 
 testAnnotationsPath = './test/annotations'
 testImagesPath = './test/images'
@@ -44,24 +45,17 @@ def GetListOfFiles(root, file_type):
                                                 files in os.walk(root) for f in files if f.endswith(file_type)]
 
 def CheckQuantity(data):
-    speedLimit = 0
-    stop = 0
+    other = 0
     crosswalk = 0
-    trafficlight = 0
     for annotation in data:
         for object in annotation['objects']:
             name = object.name
-            classId = classIdConversion[name]
-            if classId == 0:
-                speedLimit = speedLimit + 1
-            if classId == 1:
-                stop = stop + 1
-            if classId == 2:
+            if classIdConversion[name]:
                 crosswalk = crosswalk + 1
-            if classId == 3:
-                trafficlight = trafficlight + 1
+            else:
+                other = other + 1
 
-    print("Speed Limit", speedLimit, "\nStop", stop, "\nCrosswalk", crosswalk, "\nTraffic lights", trafficlight)
+    print("Crosswalk", crosswalk, "\nOthers", other)
 
 
 def GetAnnotationsData(annotationPath):
