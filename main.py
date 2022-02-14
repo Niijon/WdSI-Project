@@ -43,6 +43,26 @@ class Object:
 def GetListOfFiles(root, file_type):
     return [os.path.join(directory_path, f) for directory_path, directory_name,
                                                 files in os.walk(root) for f in files if f.endswith(file_type)]
+
+def CheckQuantity(data):
+    speedLimit = 0
+    stop = 0
+    crosswalk = 0
+    trafficlight = 0
+    for annotation in data:
+        for object in annotation['objects']:
+            name = object.name
+            classId = classIdConversion[name]
+            if classId == 0:
+                speedLimit = speedLimit + 1
+            if classId == 1:
+                stop = stop + 1
+            if classId == 2:
+                crosswalk = crosswalk + 1
+            if classId == 3:
+                trafficlight = trafficlight + 1
+
+    print("Speed Limit", speedLimit, "\nStop", stop, "\nCrosswalk", crosswalk, "\nTraffic lights", trafficlight)
 def GetAnnotationsData(annotationPath):
     annotationsPaths = GetListOfFiles(annotationPath, '.xml')
     annotationList = []
@@ -111,7 +131,16 @@ def BalanceData(data, ratio):
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
+    print("Getting annotations")
     trainAnnotations = GetAnnotationsData(trainAnnotationsPath)
+    testAnnotations = GetAnnotationsData(testAnnotationsPath)
+
+    print("Check data in datasets")
+    print("Testing data")
+    CheckQuantity(testAnnotations)
+    print("Training data")
+    CheckQuantity(trainAnnotations)
+
     print("Annotations data:")
     PrintAnnotations(trainAnnotations)
     trainData = LoadData(trainImagesPath, trainAnnotations)
