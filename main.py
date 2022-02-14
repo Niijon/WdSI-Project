@@ -100,6 +100,10 @@ def PrintAnnotations(data):
         for obj in objectsList:
             print(obj.xmin, obj.xmax, obj.ymin, obj.ymax)
 
+# Calculate field of object
+def CalculateField(xmin, xmax, ymin, ymax):
+    return (xmax-xmin) * (ymax-ymin)
+
 # Loading images based on annotations
 def LoadData(path, annotations, train):
     # train object
@@ -112,7 +116,12 @@ def LoadData(path, annotations, train):
             else:
                 img = image
             name = object.name
+            fieldPercent = CalculateField(object.xmin, object.xmax, object.ymin, object.ymax) / \
+                           (int(annotation['width']) * int(annotation['height']))
             classId = classIdConversion[name]
+            # if fieldPercent >= 0.1 and not train:
+            #     data.append({'image': img, 'label': classId})
+            # if train:
             data.append({'image': img, 'label': classId})
 
     return data
@@ -183,7 +192,6 @@ def Predict(rf, data):
 
 
 def Evaluate(data):
-    # TODO
     y_pred = []
     y_real = []
     n_corr = 0
@@ -205,9 +213,10 @@ def Evaluate(data):
     # accuracy = 100 * (_TPa + _TPb + _TPc + _TPd) / (_TPa + _Eba + _Eca + _Eda + _Eab + _TPb + _Ecb + _Edb + _Eac + _Ebc + _TPc + _Edc + _Ead + _Ebd + _Ecd + _TPd)
 
     # Binary detection
-    _TPa, _Eba, _Eab, _TPb = confusion.ravel()
-    accuracy = 100 * (_TPa + _TPb) / (_TPa + _Eba + _Eab + _TPb)
-    print("accuracy =", round(accuracy, 2), "%")
+    if n_incorr:
+        _TPa, _Eba, _Eab, _TPb = confusion.ravel()
+        accuracy = 100 * (_TPa + _TPb) / (_TPa + _Eba + _Eab + _TPb)
+        print("accuracy =", round(accuracy, 2), "%")
     # ------------------
     print("Score = %.2f" % (100*n_corr/max(n_corr+n_incorr, 1)), " %")
 
