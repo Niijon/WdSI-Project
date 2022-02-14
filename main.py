@@ -12,8 +12,7 @@ import random
 import os
 import cv2
 
-
-
+# 1 - means crosswalk
 # 0 - means other sign type
 classIdConversion = {'speedlimit': 0,
               'stop': 0,
@@ -25,6 +24,7 @@ testImagesPath = './test/images'
 trainAnnotationsPath = './train/annotations'
 trainImagesPath = './train/images'
 
+# Object class for storing data of object in the picture
 class Object:
     xmax = 0
     xmin = 0
@@ -39,11 +39,15 @@ class Object:
         self.ymax = ymax
         self.ymin = ymin
 
+# Function for cutting object from entire photo based on corner points of rectangle
+def CutObjectFromImage(img, startCol, endCol, startRow, endRow):
+    return img[startRow:endRow, startCol:endCol]
 
-def GetListOfFiles(root, file_type):
+# Get all of the files from directory of specified type
+def GetListOfFiles(pathSelected, fileType):
     return [os.path.join(directory_path, f) for directory_path, directory_name,
-                                                files in os.walk(root) for f in files if f.endswith(file_type)]
-
+                                                files in os.walk(pathSelected) for f in files if f.endswith(fileType)]
+# Check Quantity of crosswalks inside of dataset along with other objects
 def CheckQuantity(data):
     other = 0
     crosswalk = 0
@@ -62,13 +66,15 @@ def GetAnnotationsData(annotationPath):
     annotationsPaths = GetListOfFiles(annotationPath, '.xml')
     annotationList = []
     for a_path in annotationsPaths:
+        # Get root of xml file
         root = ET.parse(a_path).getroot()
         annotation = {}
+        # Get all of the specified values
         annotation['filename'] = root.find("./filename").text
         annotation['width'] = root.find("./size/width").text
         annotation['height'] = root.find("./size/height").text
 
-        # Finding all posible objects
+        # Finding all posible objects and collect their values
         name = root.findall("./object/name")
         xmin = root.findall("./object/bndbox/xmin")
         ymin = root.findall("./object/bndbox/ymin")
@@ -94,15 +100,20 @@ def PrintAnnotations(data):
         for obj in objectsList:
             print(obj.xmin, obj.xmax, obj.ymin, obj.ymax)
 
-def LoadData(path, annotations):
+# Loading images based on annotations
+def LoadData(path, annotations, train):
     # train object
     data = []
     for annotation in annotations:
         image = cv2.imread(os.path.join(path, annotation['filename']))
         for object in annotation['objects']:
+            if train:
+                img = CutObjectFromImage(image, object.xmin, object.xmax, object.ymin, object.ymax)
+            else:
+                img = image
             name = object.name
             classId = classIdConversion[name]
-            data.append({'image': image, 'label': classId})
+            data.append({'image': img, 'label': classId})
 
     return data
 
@@ -135,8 +146,6 @@ def ExtractFeatures(data):
     vocabulary = np.load('voc.npy')
     bow.setVocabulary(vocabulary)
     for sample in data:
-        # compute descriptor and add it as "desc" entry in sample
-        # TODO
         kpts = sift.detect(sample['image'], None)
         desc = bow.compute(sample['image'], kpts)
         if desc is not None:
@@ -148,15 +157,6 @@ def ExtractFeatures(data):
     return data
 
 def Train(data):
-    # TODO
-    # Uff
-    # clf = RandomForestClassifier(128)
-    # x_matrix = np.empty((1,128))
-    # y_vector = []
-    # for sample in data:
-    #     y_vector.append(sample['label'])
-    #     x_matrix = np.vstack((x_matrix, sample['desc']))
-    # clf.fit(x_matrix[1:], y_vector)
     desc = []
     labels = []
     for sample in data:
@@ -174,12 +174,12 @@ def Predict(rf, data):
     # TODO
     for sample in data:
         if sample['desc'] is not None:
-            # sample.update({'label_pred': rf.predict(sample['desc'])[0]})
             pred = rf.predict(sample['desc'])
             sample['label_pred'] = int(pred)
     # ------------------
 
     return data
+
 
 
 def Evaluate(data):
@@ -199,12 +199,17 @@ def Evaluate(data):
 
     confusion = confusion_matrix(y_real, y_pred)
 
-    _TPa, _Eba, _Eca, _Eda, _Eab, _TPb, _Ecb, _Edb, _Eac, _Ebc, _TPc, _Edc, _Ead, _Ebd, _Ecd, _TPd = confusion.ravel()
-    print(confusion)
-    accuracy = 100 * (_TPa + _TPb + _TPc + _TPd) / (_TPa + _Eba + _Eca + _Eda + _Eab + _TPb + _Ecb + _Edb + _Eac + _Ebc + _TPc + _Edc + _Ead + _Ebd + _Ecd + _TPd)
+    # Detection of all types
+    # _TPa, _Eba, _Eca, _Eda, _Eab, _TPb, _Ecb, _Edb, _Eac, _Ebc, _TPc, _Edc, _Ead, _Ebd, _Ecd, _TPd = confusion.ravel()
+    # print(confusion)
+    # accuracy = 100 * (_TPa + _TPb + _TPc + _TPd) / (_TPa + _Eba + _Eca + _Eda + _Eab + _TPb + _Ecb + _Edb + _Eac + _Ebc + _TPc + _Edc + _Ead + _Ebd + _Ecd + _TPd)
+
+    # Binary detection
+    _TPa, _Eba, _Eab, _TPb = confusion.ravel()
+    accuracy = 100 * (_TPa + _TPb) / (_TPa + _Eba + _Eab + _TPb)
     print("accuracy =", round(accuracy, 2), "%")
     # ------------------
-    print("Score = %.3f" % (n_corr/max(n_corr+n_incorr, 1)))
+    print("Score = %.2f" % (100*n_corr/max(n_corr+n_incorr, 1)), " %")
 
     # this function does not return anything
     return
@@ -223,7 +228,7 @@ if __name__ == '__main__':
 
     print("Annotations data:")
     PrintAnnotations(trainAnnotations)
-    trainData = LoadData(trainImagesPath, trainAnnotations)
+    trainData = LoadData(trainImagesPath, trainAnnotations, 1)
     trainData = BalanceData(trainData, 1.0)
 
     if os.path.isfile('voc.npy'):
@@ -238,10 +243,9 @@ if __name__ == '__main__':
     rf = Train(trainData)
 
     print("Extracting test data")
-
     print("Annotations data:")
     PrintAnnotations(testAnnotations)
-    testData = LoadData(testImagesPath, testAnnotations)
+    testData = LoadData(testImagesPath, testAnnotations, 0)
     testData = BalanceData(testData, 1.0)
 
     print("Extracting test features")
