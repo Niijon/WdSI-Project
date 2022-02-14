@@ -5,7 +5,6 @@
 
 
 import numpy as np
-import pandas
 import xml.etree.ElementTree as ET
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import confusion_matrix
@@ -63,6 +62,8 @@ def CheckQuantity(data):
                 trafficlight = trafficlight + 1
 
     print("Speed Limit", speedLimit, "\nStop", stop, "\nCrosswalk", crosswalk, "\nTraffic lights", trafficlight)
+
+
 def GetAnnotationsData(annotationPath):
     annotationsPaths = GetListOfFiles(annotationPath, '.xml')
     annotationList = []
@@ -115,6 +116,9 @@ def BalanceData(data, ratio):
     sampledData = random.sample(data, int(ratio * len(data)))
 
     return sampledData
+
+def LearnBoVW(data):
+    # TODO
     dict_size = 128
     bow = cv2.BOWKMeansTrainer(dict_size)
 
@@ -128,6 +132,88 @@ def BalanceData(data, ratio):
 
     vocabulary = bow.cluster()
     np.save('voc.npy', vocabulary)
+
+
+def ExtractFeatures(data):
+    sift = cv2.SIFT_create()
+    flann = cv2.FlannBasedMatcher_create()
+    bow = cv2.BOWImgDescriptorExtractor(sift, flann)
+    vocabulary = np.load('voc.npy')
+    bow.setVocabulary(vocabulary)
+    for sample in data:
+        # compute descriptor and add it as "desc" entry in sample
+        # TODO
+        kpts = sift.detect(sample['image'], None)
+        desc = bow.compute(sample['image'], kpts)
+        if desc is not None:
+            sample.update({'desc': desc})
+        else:
+            sample.update({'desc': np.zeros((1, 128))})
+        # ------------------
+
+    return data
+
+def Train(data):
+    # TODO
+    # Uff
+    # clf = RandomForestClassifier(128)
+    # x_matrix = np.empty((1,128))
+    # y_vector = []
+    # for sample in data:
+    #     y_vector.append(sample['label'])
+    #     x_matrix = np.vstack((x_matrix, sample['desc']))
+    # clf.fit(x_matrix[1:], y_vector)
+    desc = []
+    labels = []
+    for sample in data:
+        if sample['desc'] is not None:
+            desc.append(sample['desc'].squeeze(0))
+            labels.append(sample['label'])
+
+    rf = RandomForestClassifier()
+    rf.fit(desc, labels)
+    # ------------------
+
+    return rf
+
+def Predict(rf, data):
+    # TODO
+    for sample in data:
+        if sample['desc'] is not None:
+            # sample.update({'label_pred': rf.predict(sample['desc'])[0]})
+            pred = rf.predict(sample['desc'])
+            sample['label_pred'] = int(pred)
+    # ------------------
+
+    return data
+
+
+def Evaluate(data):
+    # TODO
+    y_pred = []
+    y_real = []
+    n_corr = 0
+    n_incorr = 0
+    for sample in data:
+        if sample['desc'] is not None:
+            y_pred.append(sample['label_pred'])
+            y_real.append(sample['label'])
+            if sample['label_pred'] == sample['label']:
+                n_corr += 1
+            else:
+                n_incorr += 1
+
+    confusion = confusion_matrix(y_real, y_pred)
+
+    _TPa, _Eba, _Eca, _Eda, _Eab, _TPb, _Ecb, _Edb, _Eac, _Ebc, _TPc, _Edc, _Ead, _Ebd, _Ecd, _TPd = confusion.ravel()
+    print(confusion)
+    accuracy = 100 * (_TPa + _TPb + _TPc + _TPd) / (_TPa + _Eba + _Eca + _Eda + _Eab + _TPb + _Ecb + _Edb + _Eac + _Ebc + _TPc + _Edc + _Ead + _Ebd + _Ecd + _TPd)
+    print("accuracy =", round(accuracy, 2), "%")
+    # ------------------
+    print("Score = %.3f" % (n_corr/max(n_corr+n_incorr, 1)))
+
+    # this function does not return anything
+    return
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
@@ -145,6 +231,31 @@ if __name__ == '__main__':
     PrintAnnotations(trainAnnotations)
     trainData = LoadData(trainImagesPath, trainAnnotations)
     trainData = BalanceData(trainData, 1.0)
+
+    if os.path.isfile('voc.npy'):
+        print('BoVW is already learned')
+    else:
+        LearnBoVW(trainData)
+
+    print("Extracting train features")
+    trainData = ExtractFeatures(trainData)
+
+    print("Training")
+    rf = Train(trainData)
+
+    print("Extracting test data")
+
+    print("Annotations data:")
+    PrintAnnotations(testAnnotations)
+    testData = LoadData(testImagesPath, testAnnotations)
+    testData = BalanceData(testData, 1.0)
+
+    print("Extracting test features")
+    trainData = ExtractFeatures(testData)
+
+    print("Testing on testing dataset")
+    testData = Predict(rf, testData)
+    Evaluate(testData)
 
 
 
