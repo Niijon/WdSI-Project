@@ -1,9 +1,3 @@
-# This is a sample Python script.
-
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-
-
 import numpy as np
 import xml.etree.ElementTree as ET
 from sklearn.ensemble import RandomForestClassifier
@@ -132,7 +126,6 @@ def BalanceData(data, ratio):
     return sampledData
 
 def LearnBoVW(data):
-    # TODO
     dict_size = 128
     bow = cv2.BOWKMeansTrainer(dict_size)
 
@@ -180,7 +173,6 @@ def Train(data):
     return rf
 
 def Predict(rf, data):
-    # TODO
     for sample in data:
         if sample['desc'] is not None:
             pred = rf.predict(sample['desc'])
@@ -263,8 +255,3 @@ if __name__ == '__main__':
     print("Testing on testing dataset")
     testData = Predict(rf, testData)
     Evaluate(testData)
-
-
-
-
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
