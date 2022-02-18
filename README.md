@@ -28,3 +28,6 @@ Kroki które podjęto:
 - Trzeci program zaczął odrzucać przypadki pasów których powierzchnia zajmowała mniej niż 0.1 całego obrazu. Jednak konsekwencją tego było to że zabieg ten doprowadził do znaczącego zmniejszenia się obiektów w bazie uczącej i testowej. 
 - Czwarty program posiadał powyżej wymieniony zabieg tylko dla bazy testowej jednak to z kolei doprowadzało do 100% dokładności jeżeli chodzi o wnioskowanie o znakach. Sama baza znaków testowych zmalało bowiem 10-cio krotnie i w ostateczności posiadaliśmy tylko znaki które dawały wynik prawdziwy.
 - Ostatecznie zakomentowano fragmenty kodu tak abyśmy posiadali bazę bez sprawdzania warunku powierzchni, powrócono zatem do wersji drugiej.
+- Po poprawie warunku tak aby odpowiadał on własności powierzchni pola naszego obrazka i odkomentowaniu fragmentu kodu który odrzucał zdjęcia które posiadały mniejszą powierzchnie niż 0.01 naszego obrazka uzyskaliśmy skuteczność w klasyfikacji równą 94.5%.
+
+Po poprawie warunku ilość obiektów klasyfikowanych wzrosła z 4 do 200. Łączna ilość obiektów na obrazkach dla zbioru testowego to 399. Oznacza to że ponad połowa naszych elementów nie jest w ogóle uwzględniania. Jeżeli uwzględnimy całość to nasza dokładność spada z około 94.5% do około 90%.
