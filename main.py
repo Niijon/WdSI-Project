@@ -119,7 +119,7 @@ def LoadData(path, annotations, train):
             fieldPercent = CalculateField(object.xmin, object.xmax, object.ymin, object.ymax) / \
                            (int(annotation['width']) * int(annotation['height']))
             classId = classIdConversion[name]
-            # if fieldPercent >= 0.1 and not train:
+            # if fieldPercent >= 0.01 and not train:
             #     data.append({'image': img, 'label': classId})
             # if train:
             data.append({'image': img, 'label': classId})
