@@ -25,13 +25,17 @@ class Object:
     ymax = 0
     ymin = 0
     name = ''
+    imageHeight = 0
+    imageWidth = 0
 
-    def __init__(self, name, xmax, xmin, ymax, ymin):
+    def __init__(self, name, xmax, xmin, ymax, ymin, height, width):
         self.name = name
         self.xmax = xmax
         self.xmin = xmin
         self.ymax = ymax
         self.ymin = ymin
+        self.imageHeight = height
+        self.imageWidth = width
 
 # Function for cutting object from entire photo based on corner points of rectangle
 def CutObjectFromImage(img, startCol, endCol, startRow, endRow):
@@ -64,9 +68,11 @@ def GetAnnotationsData(annotationPath):
         root = ET.parse(a_path).getroot()
         annotation = {}
         # Get all of the specified values
+        width = root.find("./size/width").text
+        height = root.find("./size/height").text
         annotation['filename'] = root.find("./filename").text
-        annotation['width'] = root.find("./size/width").text
-        annotation['height'] = root.find("./size/height").text
+        annotation['width'] = width
+        annotation['height'] = height
 
         # Finding all posible objects and collect their values
         name = root.findall("./object/name")
@@ -78,7 +84,7 @@ def GetAnnotationsData(annotationPath):
         # Add all objects to the list
         objectsList = []
         for i in range(len(name)):
-            objectsList.append(Object(name[i].text, int(xmax[i].text), int(xmin[i].text), int(ymax[i].text), int(ymin[i].text)))
+            objectsList.append(Object(name[i].text, int(xmax[i].text), int(xmin[i].text), int(ymax[i].text), int(ymin[i].text), int(height), int(width)))
 
         annotation['objects'] = objectsList # Add list of the objects to annotation
         annotationList.append(annotation) # Add annotation to list of annotations
@@ -94,9 +100,11 @@ def PrintAnnotations(data):
         for obj in objectsList:
             print(obj.xmin, obj.xmax, obj.ymin, obj.ymax)
 
-# Calculate field of object
-def CalculateField(xmin, xmax, ymin, ymax):
-    return (xmax-xmin) * (ymax-ymin)
+# Check size of object in the image and return true if it matches more then 0.1 width and height
+def validateWidthHeight(object):
+    width = object.xmax - object.xmin
+    height = object.ymax - object.ymin
+    return (0.1 * object.imageHeight <= height) and (0.1 * object.imageWidth <= width)
 
 # Loading images based on annotations
 def LoadData(path, annotations, train):
@@ -110,10 +118,8 @@ def LoadData(path, annotations, train):
             else:
                 img = image
             name = object.name
-            fieldPercent = CalculateField(object.xmin, object.xmax, object.ymin, object.ymax) / \
-                           (int(annotation['width']) * int(annotation['height']))
             classId = classIdConversion[name]
-            if fieldPercent >= 0.01 and not train:
+            if not train and validateWidthHeight(object):
                 data.append({'image': img, 'label': classId})
             if train:
                 data.append({'image': img, 'label': classId})
